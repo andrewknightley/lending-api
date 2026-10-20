@@ -1,0 +1,45 @@
+@baseUrl = http://localhost:5080
+@accountId = a2000000-0000-4000-8000-000000000001
+@productId = a3000000-0000-4000-8000-000000000001
+# Replace these after creating an agreement. ETag below is a placeholder, without its surrounding quotes.
+@agreementId = 00000000-0000-0000-0000-000000000000
+@etag = AAAAAAAAAAA=
+
+### Discover your existing customers, accounts and products (no demo script required).
+GET {{baseUrl}}/api/customers?pageSize=50
+
+###
+GET {{baseUrl}}/api/accounts?pageSize=50
+
+###
+GET {{baseUrl}}/api/credit-products?available=true&pageSize=50
+
+### Create an agreement. Replace IDs with existing rows, or run database/demo-data.sql first.
+# Use a new AgreementNumber for each agreement. Repeating a number returns 409.
+POST {{baseUrl}}/api/accounts/{{accountId}}/credit-agreements
+Content-Type: application/json
+
+{
+  "agreementNumber": "DEMO-AGR-001",
+  "creditProductId": "{{productId}}",
+  "agreementType": "FixedLoan",
+  "agreedAmount": 10000,
+  "annualInterestRatePercent": 7.5,
+  "termMonths": 36
+}
+
+### Get the agreement and its current ETag.
+GET {{baseUrl}}/api/credit-agreements/{{agreementId}}
+
+### Activate. Supply the exact current ETag, including quotation marks.
+POST {{baseUrl}}/api/credit-agreements/{{agreementId}}/activate
+If-Match: "{{etag}}"
+
+### List agreements for the account.
+GET {{baseUrl}}/api/accounts/{{accountId}}/credit-agreements?pageSize=50
+
+### Development OpenAPI document.
+GET {{baseUrl}}/openapi/v1.json
+
+### Database readiness.
+GET {{baseUrl}}/health/ready

@@ -1,0 +1,59 @@
+name: Build and test lending API
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: LocalTestsOnly!Sql2026
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'LocalTestsOnly!Sql2026' -C -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-start-period 30s
+          --health-retries 15
+    env:
+      LENDING_REQUIRE_SQL_TESTS: '1'
+      LENDING_TEST_SQL_CONNECTION_STRING: 'Server=localhost,1433;Database=master;User ID=sa;Password=LocalTestsOnly!Sql2026;Encrypt=True;TrustServerCertificate=True'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore Lending.sln
+      - name: Build
+        run: dotnet build Lending.sln --configuration Release --no-restore
+      - name: Unit, HTTP and real SQL integration tests
+        run: dotnet test Lending.sln --configuration Release --no-build --logger trx --results-directory TestResults
+      - name: Publish API
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: dotnet publish src/Lending.Api/Lending.Api.csproj --configuration Release --no-build --output artifacts/api
+      - name: Upload API artifact
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lending-api-${{ github.sha }}
+          path: artifacts/api/
+          if-no-files-found: error
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lending-test-results-${{ github.sha }}
+          path: TestResults/*.trx
+          if-no-files-found: warn
