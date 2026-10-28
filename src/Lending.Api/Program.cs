@@ -12,7 +12,8 @@ builder.Services.AddSingleton(sp => new SqlConnectionFactory(
     sp.GetRequiredService<IConfiguration>().GetConnectionString("Lending") ?? ""));
 builder.Services.AddScoped<IAgreementSessionFactory, SqlAgreementSessionFactory>();
 builder.Services.AddScoped<ILendingQueries, SqlLendingQueries>();
-builder.Services.AddScoped<AgreementService>();
+builder.Services.AddScoped<CreateAgreementCommandHandler>();
+builder.Services.AddScoped<ActivateAgreementCommandHandler>();
 
 var app = builder.Build();
 app.UseExceptionHandler();

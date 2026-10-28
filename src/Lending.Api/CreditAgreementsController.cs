@@ -5,13 +5,16 @@ namespace Lending.Api;
 
 [ApiController]
 [Route("api")]
-public sealed class CreditAgreementsController(AgreementService service, ILendingQueries queries) : ControllerBase
+public sealed class CreditAgreementsController(
+    CreateAgreementCommandHandler createHandler,
+    ActivateAgreementCommandHandler activateHandler,
+    ILendingQueries queries) : ControllerBase
 {
     [HttpPost("accounts/{accountId:guid}/credit-agreements")]
     [ProducesResponseType<AgreementView>(StatusCodes.Status201Created)]
     public async Task<ActionResult<AgreementView>> Create(Guid accountId, CreateAgreementRequest request, CancellationToken cancellationToken)
     {
-        var result = await service.CreateAsync(request.ToCommand(accountId), cancellationToken);
+        var result = await createHandler.HandleAsync(request.ToCommand(accountId), cancellationToken);
         Response.Headers.ETag = AgreementEtags.FromVersion(result.RowVersion);
         return CreatedAtAction(nameof(GetAgreement), new { id = result.CreditAgreementId }, result);
     }
@@ -33,7 +36,7 @@ public sealed class CreditAgreementsController(AgreementService service, ILendin
             return Problem(statusCode: 428, title: "Precondition required", detail: "Supply the agreement's current ETag in the If-Match header.");
         if (!AgreementEtags.TryParse(ifMatch, out var version))
             return Problem(statusCode: 400, title: "Invalid If-Match header", detail: "Supply one strong, quoted ETag returned by this API. Wildcards and weak ETags are not supported.");
-        var result = await service.ActivateAsync(id, version, cancellationToken);
+        var result = await activateHandler.HandleAsync(new ActivateAgreementCommand(id, version), cancellationToken);
         Response.Headers.ETag = AgreementEtags.FromVersion(result.RowVersion);
         return Ok(result);
     }
