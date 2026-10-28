@@ -11,14 +11,10 @@ internal static class SqlMapping
     internal static DateTimeOffset Utc(SqlDataReader reader, int ordinal)
         => new(DateTime.SpecifyKind(reader.GetDateTime(ordinal), DateTimeKind.Utc));
 
-    internal static StoredAgreement Agreement(SqlDataReader reader)
-    {
-        var aggregate = CreditAgreement.Restore(reader.GetGuid(0), reader.GetString(1), reader.GetGuid(2), reader.GetGuid(3),
-            AgreementTerms.Create(Enum.Parse<AgreementType>(reader.GetString(4)), reader.GetDecimal(5), reader.GetDecimal(6),
-                reader.IsDBNull(7) ? null : reader.GetInt32(7)), Enum.Parse<AgreementStatus>(reader.GetString(8)),
-            Utc(reader, 9), reader.IsDBNull(10) ? null : Utc(reader, 10));
-        return new StoredAgreement(aggregate, (byte[])reader.GetValue(11));
-    }
+    internal static AgreementView Agreement(SqlDataReader reader)
+        => new(reader.GetGuid(0), reader.GetString(1), reader.GetGuid(2), reader.GetGuid(3), reader.GetString(4),
+            reader.GetDecimal(5), reader.GetDecimal(6), reader.IsDBNull(7) ? null : reader.GetInt32(7), reader.GetString(8),
+            Utc(reader, 9), reader.IsDBNull(10) ? null : Utc(reader, 10), Convert.ToBase64String((byte[])reader.GetValue(11)));
 
     internal static SqlParameter GuidParameter(string name, Guid value) => new(name, SqlDbType.UniqueIdentifier) { Value = value };
     internal static SqlParameter DecimalParameter(string name, decimal value, byte precision, byte scale)

@@ -43,9 +43,7 @@ public sealed class FakeStore : IAgreementSessionFactory, ILendingQueries
     public Task<IAgreementSession> BeginAsync(CancellationToken cancellationToken) => Task.FromResult<IAgreementSession>(new Session(this));
     private static StoredAgreement Clone(StoredAgreement stored)
     {
-        var a = stored.Aggregate;
-        return new(CreditAgreement.Restore(a.CreditAgreementId, a.AgreementNumber, a.AccountId, a.CreditProductId, a.Terms,
-            a.Status, a.CreatedAtUtc, a.ActivatedAtUtc), [.. stored.RowVersion]);
+        return new(CreditAgreement.Replay(stored.Aggregate.History), [.. stored.RowVersion]);
     }
 
     private sealed class Session(FakeStore store) : IAgreementSession

@@ -1,23 +1,24 @@
+using Lending.Domain.Events;
+
 namespace Lending.Domain;
 
 public sealed class CreditAgreement
 {
-    public Guid CreditAgreementId { get; }
-    public string AgreementNumber { get; }
-    public Guid AccountId { get; }
-    public Guid CreditProductId { get; }
-    public AgreementTerms Terms { get; }
-    public AgreementStatus Status { get; private set; }
-    public DateTimeOffset CreatedAtUtc { get; }
-    public DateTimeOffset? ActivatedAtUtc { get; private set; }
+    private readonly List<AgreementEvent> pendingEvents = [];
+    private readonly List<AgreementEvent> history = [];
+    public IReadOnlyList<AgreementEvent> History => history.AsReadOnly();
+    public long Version { get; private set; }
+    public IReadOnlyList<AgreementEvent> PendingEvents => pendingEvents.AsReadOnly();
+    private CreditAgreement() { AgreementNumber = ""; Terms = null!; }
 
-    private CreditAgreement(Guid id, string number, Guid accountId, Guid productId, AgreementTerms terms,
-        AgreementStatus status, DateTimeOffset createdAtUtc, DateTimeOffset? activatedAtUtc)
-    {
-        CreditAgreementId = id; AgreementNumber = number; AccountId = accountId;
-        CreditProductId = productId; Terms = terms; Status = status;
-        CreatedAtUtc = createdAtUtc.ToUniversalTime(); ActivatedAtUtc = activatedAtUtc?.ToUniversalTime();
-    }
+    public Guid CreditAgreementId { get; private set; }
+    public string AgreementNumber { get; private set; }
+    public Guid AccountId { get; private set; }
+    public Guid CreditProductId { get; private set; }
+    public AgreementTerms Terms { get; private set; }
+    public AgreementStatus Status { get; private set; }
+    public DateTimeOffset CreatedAtUtc { get; private set; }
+    public DateTimeOffset? ActivatedAtUtc { get; private set; }
 
     public static string ValidateNumber(string? number)
     {
@@ -37,14 +38,11 @@ public sealed class CreditAgreement
         account.EnsureEligible();
         product.EnsureEligible(terms.Type);
 
-        return new CreditAgreement(id, number, account.AccountId, product.CreditProductId, terms,
-            AgreementStatus.Pending, now, null);
+        var agreement = new CreditAgreement();
+        agreement.Record(new AgreementCreated(id, now.ToUniversalTime(), number, account.AccountId,
+            product.CreditProductId, terms.Type, terms.Amount, terms.AnnualInterestRatePercent, terms.TermMonths));
+        return agreement;
     }
-
-    // Hydration is separate from creation: changed parent/catalogue state must not erase accepted terms.
-    public static CreditAgreement Restore(Guid id, string number, Guid accountId, Guid productId,
-        AgreementTerms terms, AgreementStatus status, DateTimeOffset createdAtUtc, DateTimeOffset? activatedAtUtc)
-        => new(id, number, accountId, productId, terms, status, createdAtUtc, activatedAtUtc);
 
     public bool Activate(AccountEligibility account, DateTimeOffset now)
     {
@@ -56,9 +54,57 @@ public sealed class CreditAgreement
         if (now < CreatedAtUtc)
             throw new DomainConflictException("invalid_activation_time", "Activation cannot precede agreement creation.");
 
-        Status = AgreementStatus.Active;
-        ActivatedAtUtc = now.ToUniversalTime();
+        Record(new AgreementActivated(CreditAgreementId, now.ToUniversalTime()));
 
         return true;
+    }
+    public static CreditAgreement Replay(IEnumerable<AgreementEvent> history)
+    {
+        var agreement = new CreditAgreement();
+        foreach (var @event in history) agreement.Apply(@event);
+        if (agreement.Version == 0) throw new InvalidOperationException("An agreement stream cannot be empty.");
+        return agreement;
+    }
+
+    private void Record(AgreementEvent @event)
+    {
+        Apply(@event);
+        pendingEvents.Add(@event);
+    }
+
+    // Replay applies historical facts. It must not consult current eligibility, a clock or emit events.
+    private void Apply(AgreementEvent @event)
+    {
+        if (Version > 0 && @event.CreditAgreementId != CreditAgreementId)
+            throw new InvalidOperationException("Event belongs to a different agreement.");
+        switch (@event)
+        {
+            case AgreementCreated e when Version == 0:
+                SetInitial(e.CreditAgreementId, e.AgreementNumber, e.AccountId, e.CreditProductId,
+                    e.AgreementType, e.AgreedAmount, e.AnnualInterestRatePercent, e.TermMonths,
+                    AgreementStatus.Pending, e.OccurredAtUtc, null);
+                break;
+            case AgreementImported e when Version == 0:
+                SetInitial(e.CreditAgreementId, e.AgreementNumber, e.AccountId, e.CreditProductId,
+                    e.AgreementType, e.AgreedAmount, e.AnnualInterestRatePercent, e.TermMonths,
+                    e.Status, e.CreatedAtUtc, e.ActivatedAtUtc);
+                break;
+            case AgreementActivated e when Version > 0 && Status == AgreementStatus.Pending:
+                Status = AgreementStatus.Active;
+                ActivatedAtUtc = e.OccurredAtUtc.ToUniversalTime();
+                break;
+            default:
+                throw new InvalidOperationException("Unsupported event or invalid agreement event order.");
+        }
+        history.Add(@event);
+        Version++;
+    }
+
+    private void SetInitial(Guid id, string number, Guid accountId, Guid productId, AgreementType type,
+        decimal amount, decimal rate, int? term, AgreementStatus status, DateTimeOffset created, DateTimeOffset? activated)
+    {
+        CreditAgreementId = id; AgreementNumber = number; AccountId = accountId; CreditProductId = productId;
+        Terms = AgreementTerms.FromHistory(type, amount, rate, term);
+        Status = status; CreatedAtUtc = created.ToUniversalTime(); ActivatedAtUtc = activated?.ToUniversalTime();
     }
 }

@@ -31,6 +31,22 @@ jobs:
       LENDING_TEST_SQL_CONNECTION_STRING: 'Server=localhost,1433;Database=master;User ID=sa;Password=LocalTestsOnly!Sql2026;Encrypt=True;TrustServerCertificate=True'
     steps:
       - uses: actions/checkout@v4
+      - name: Check out companion event-store contract
+        uses: actions/checkout@v4
+        with:
+          repository: andrewknightley/lending-sql-infrastructure
+          ref: 4cdd8c9fc3b3764fc06a9f57c75e4175745e4e19
+          path: .schema-source
+      - name: Verify event-store schema and migration match infrastructure
+        run: |
+          python3 - <<'PYCODE'
+          from pathlib import Path
+          source = Path('.schema-source')
+          schema = Path('database/schema.sql').read_text()
+          for name in ['Tables/AgreementStream.sql', 'Tables/AgreementEvent.sql', 'Triggers/TR_AgreementEvent_Immutable.sql']:
+              assert (source / 'src/Lending.Database/lending' / name).read_text() in schema, name
+          assert Path('database/import-legacy-agreements.sql').read_text() == (source / 'scripts/Import.LegacyAgreements.sql').read_text()
+          PYCODE
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'

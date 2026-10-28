@@ -34,6 +34,13 @@ app.MapGet("/health/ready", async (SqlConnectionFactory connections, Cancellatio
     return Results.Ok(new { status = "ready" });
 }).ExcludeFromDescription();
 app.MapControllers();
+if (args.Length == 2 && args[0] == "--rebuild-agreement-projection")
+{
+    if (!Guid.TryParse(args[1], out var id)) throw new ArgumentException("Supply a valid agreement GUID.");
+    await new SqlAgreementProjectionRebuilder(app.Services.GetRequiredService<SqlConnectionFactory>()).RebuildAsync(id);
+    Console.WriteLine("Agreement projection rebuilt. Clients must reload its ETag.");
+    return;
+}
 app.Run();
 
 namespace Lending.Api
