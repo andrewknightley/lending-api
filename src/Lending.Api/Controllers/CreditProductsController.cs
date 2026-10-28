@@ -1,7 +1,7 @@
 using Lending.Application;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Lending.Api;
+namespace Lending.Api.Controllers;
 
 [ApiController]
 [Route("api/credit-products")]

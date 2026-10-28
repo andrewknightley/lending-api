@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Lending.Application;
+using Lending.Application.Commands;
 using Lending.Domain;
 
 namespace Lending.Api;
