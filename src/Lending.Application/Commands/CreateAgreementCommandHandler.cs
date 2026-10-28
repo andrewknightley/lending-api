@@ -1,6 +1,6 @@
 using Lending.Domain;
 
-namespace Lending.Application;
+namespace Lending.Application.Commands;
 
 public sealed class CreateAgreementCommandHandler(IAgreementSessionFactory sessionFactory, TimeProvider clock)
 {

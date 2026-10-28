@@ -1,5 +1,6 @@
 using Lending.Api;
 using Lending.Application;
+using Lending.Application.Commands;
 using Lending.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
