@@ -2,7 +2,7 @@ using Lending.Domain;
 
 namespace Lending.Application;
 
-// One short transaction covers reading eligibility, enforcing rules and persisting the outcome.
+// One transaction covers eligibility, expected-version event append and synchronous projection.
 public interface IAgreementSessionFactory
 {
     Task<IAgreementSession> BeginAsync(CancellationToken cancellationToken);
@@ -12,6 +12,7 @@ public interface IAgreementSession : IAsyncDisposable
 {
     Task<AccountEligibility?> GetAccountEligibilityAsync(Guid accountId, CancellationToken cancellationToken);
     Task<ProductEligibility?> GetProductEligibilityAsync(Guid productId, CancellationToken cancellationToken);
+    // Command state is replayed from events; RowVersion is the projection HTTP concurrency token.
     Task<StoredAgreement?> GetAgreementForUpdateAsync(Guid agreementId, CancellationToken cancellationToken);
     Task<StoredAgreement> InsertAsync(CreditAgreement agreement, CancellationToken cancellationToken);
     Task<StoredAgreement> UpdateActivationAsync(CreditAgreement agreement, byte[] expectedVersion, CancellationToken cancellationToken);

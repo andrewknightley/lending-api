@@ -1,4 +1,4 @@
--- Exact table and index definitions recovered from lending-sql-infrastructure.zip (01 Oct 2026).
+-- Disposable test schema; event-store definitions mirror the companion SQL infrastructure PR.
 -- Only for a NEW disposable/development database. Use the separate SQL project/DACPAC for existing databases.
 
 CREATE SCHEMA [lending] AUTHORIZATION [dbo];
@@ -101,4 +101,48 @@ CREATE INDEX [IX_CreditAgreement_AccountId] ON [lending].[CreditAgreement] ([Acc
 GO
 
 CREATE INDEX [IX_CreditAgreement_CreditProductId] ON [lending].[CreditAgreement] ([CreditProductId]);
+GO
+
+-- Stream heads also reserve business numbers independently of the rebuildable projection.
+CREATE TABLE [lending].[AgreementStream]
+(
+    [CreditAgreementId] uniqueidentifier NOT NULL,
+    [AgreementNumber] varchar(30) NOT NULL,
+    [Version] bigint NOT NULL,
+    CONSTRAINT [PK_AgreementStream] PRIMARY KEY ([CreditAgreementId]),
+    CONSTRAINT [UQ_AgreementStream_Number] UNIQUE ([AgreementNumber]),
+    CONSTRAINT [CK_AgreementStream_Version] CHECK ([Version] >= 1)
+);
+
+GO
+
+CREATE TABLE [lending].[AgreementEvent]
+(
+    [EventId] uniqueidentifier NOT NULL,
+    [CreditAgreementId] uniqueidentifier NOT NULL,
+    [StreamVersion] bigint NOT NULL,
+    [EventType] varchar(80) NOT NULL,
+    [SchemaVersion] int NOT NULL,
+    [OccurredAtUtc] datetime2(7) NOT NULL,
+    [Payload] nvarchar(max) NOT NULL,
+    CONSTRAINT [PK_AgreementEvent] PRIMARY KEY ([CreditAgreementId], [StreamVersion]),
+    CONSTRAINT [UQ_AgreementEvent_Id] UNIQUE ([EventId]),
+    CONSTRAINT [FK_AgreementEvent_Stream] FOREIGN KEY ([CreditAgreementId]) REFERENCES [lending].[AgreementStream] ([CreditAgreementId]),
+    CONSTRAINT [CK_AgreementEvent_Version] CHECK ([StreamVersion] >= 1),
+    CONSTRAINT [CK_AgreementEvent_Schema] CHECK ([SchemaVersion] = 1),
+    CONSTRAINT [CK_AgreementEvent_Type] CHECK ([EventType] IN ('AgreementCreated', 'AgreementActivated', 'AgreementImported')),
+    CONSTRAINT [CK_AgreementEvent_Json] CHECK (ISJSON([Payload]) = 1)
+);
+
+GO
+
+CREATE TRIGGER [lending].[TR_AgreementEvent_Immutable]
+ON [lending].[AgreementEvent]
+AFTER UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    THROW 51000, 'Agreement events are immutable. Append a new business fact instead.', 1;
+END;
+
 GO
