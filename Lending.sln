@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.8.12009.203 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
@@ -20,6 +20,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lending.ApiTests", "tests\Lending.ApiTests\Lending.ApiTests.csproj", "{3CA7CE90-7C60-4801-B31F-BE43020BD0E2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lending.SqlIntegrationTests", "tests\Lending.SqlIntegrationTests\Lending.SqlIntegrationTests.csproj", "{7F07049E-7772-490D-B5E5-0DDB48F0363A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{662F50EC-7DFC-456E-AEE2-8C62AADEB44E}"
+	ProjectSection(SolutionItems) = preProject
+		Lending.Api.http = Lending.Api.http
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

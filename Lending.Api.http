@@ -1,9 +1,9 @@
 @baseUrl = http://localhost:5080
-@accountId = a2000000-0000-4000-8000-000000000001
-@productId = a3000000-0000-4000-8000-000000000001
+@accountId = bc57433e-f36b-1410-83fd-002e2e2f033a
+@productId = b057433e-f36b-1410-83fd-002e2e2f033a
 # Replace these after creating an agreement. ETag below is a placeholder, without its surrounding quotes.
-@agreementId = 00000000-0000-0000-0000-000000000000
-@etag = AAAAAAAAAAA=
+@agreementId = 71d5d610-be57-44fe-b019-07aa7f6c32fd
+@etag = AAAAAAAAB/Y=
 
 ### Discover your existing customers, accounts and products (no demo script required).
 GET {{baseUrl}}/api/customers?pageSize=50

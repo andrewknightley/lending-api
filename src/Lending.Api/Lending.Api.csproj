@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup><UserSecretsId>ak-lending-api-local-development</UserSecretsId></PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
     <ProjectReference Include="../Lending.Application/Lending.Application.csproj" />
     <ProjectReference Include="../Lending.Infrastructure/Lending.Infrastructure.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
