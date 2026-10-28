@@ -16,7 +16,15 @@ builder.Services.AddScoped<AgreementService>();
 
 var app = builder.Build();
 app.UseExceptionHandler();
-if (app.Environment.IsDevelopment()) app.MapOpenApi();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Lending API v1");
+    });
+}
 app.MapGet("/health/live", () => Results.Ok(new { status = "alive" })).ExcludeFromDescription();
 app.MapGet("/health/ready", async (SqlConnectionFactory connections, CancellationToken cancellationToken) =>
 {
