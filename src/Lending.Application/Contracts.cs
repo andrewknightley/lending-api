@@ -2,9 +2,6 @@ using Lending.Domain;
 
 namespace Lending.Application;
 
-public sealed record CreateAgreementCommand(Guid AccountId, string AgreementNumber, Guid CreditProductId,
-    AgreementType AgreementType, decimal AgreedAmount, decimal AnnualInterestRatePercent, int? TermMonths);
-
 public sealed record AgreementView(Guid CreditAgreementId, string AgreementNumber, Guid AccountId,
     Guid CreditProductId, string AgreementType, decimal AgreedAmount, decimal AnnualInterestRatePercent,
     int? TermMonths, string Status, DateTimeOffset CreatedAtUtc, DateTimeOffset? ActivatedAtUtc, string RowVersion);

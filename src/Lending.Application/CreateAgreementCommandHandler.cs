@@ -2,9 +2,9 @@ using Lending.Domain;
 
 namespace Lending.Application;
 
-public sealed class AgreementService(IAgreementSessionFactory sessionFactory, TimeProvider clock)
+public sealed class CreateAgreementCommandHandler(IAgreementSessionFactory sessionFactory, TimeProvider clock)
 {
-    public async Task<AgreementView> CreateAsync(
+    public async Task<AgreementView> HandleAsync(
         CreateAgreementCommand command,
         CancellationToken cancellationToken = default)
     {
@@ -38,31 +38,5 @@ public sealed class AgreementService(IAgreementSessionFactory sessionFactory, Ti
         await session.CommitAsync(cancellationToken);
 
         return stored.ToView();
-    }
-
-    public async Task<AgreementView> ActivateAsync(
-        Guid id,
-        byte[] expectedVersion,
-        CancellationToken cancellationToken = default)
-    {
-        await using var session = await sessionFactory.BeginAsync(cancellationToken);
-        var stored = await session.GetAgreementForUpdateAsync(id, cancellationToken)
-                     ?? throw new EntityNotFoundException("CreditAgreement", id);
-
-        if (!stored.RowVersion.AsSpan().SequenceEqual(expectedVersion))
-            throw new AgreementConcurrencyException();
-
-        if (stored.Aggregate.Status == AgreementStatus.Active)
-        {
-            await session.CommitAsync(cancellationToken);
-            return stored.ToView(); // Idempotent with the current version; no duplicate update or timestamp change.
-        }
-
-        var account = await session.GetAccountEligibilityAsync(stored.Aggregate.AccountId, cancellationToken)
-                      ?? throw new EntityNotFoundException("Account", stored.Aggregate.AccountId);
-        stored.Aggregate.Activate(account, clock.GetUtcNow());
-        var updated = await session.UpdateActivationAsync(stored.Aggregate, expectedVersion, cancellationToken);
-        await session.CommitAsync(cancellationToken);
-        return updated.ToView();
     }
 }
