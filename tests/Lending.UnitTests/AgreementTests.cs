@@ -1,4 +1,5 @@
 using Lending.Domain;
+using Lending.Domain.Events;
 
 namespace Lending.UnitTests;
 
@@ -97,8 +98,9 @@ public sealed class AgreementTests
     [InlineData(AgreementStatus.Settled)]
     public void Other_terminal_states_cannot_be_activated(AgreementStatus status)
     {
-        var a = CreditAgreement.Restore(Guid.NewGuid(), "AGR-1", Account.AccountId, Product.CreditProductId, Terms(), status,
-            Now, status == AgreementStatus.Settled ? Now : null);
+        var a = CreditAgreement.Replay([new AgreementImported(Guid.NewGuid(), Now, "AGR-1", Account.AccountId,
+            Product.CreditProductId, AgreementType.FixedLoan, 10000m, 7.5m, 36, status,
+            Now, status == AgreementStatus.Settled ? Now : null)]);
         Assert.Equal("invalid_agreement_transition", Assert.Throws<DomainConflictException>(() => a.Activate(Account, Now)).Code);
     }
 

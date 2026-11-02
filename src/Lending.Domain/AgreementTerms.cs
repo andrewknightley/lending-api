@@ -14,6 +14,10 @@ public sealed record AgreementTerms
     private AgreementTerms(AgreementType type, decimal amount, decimal rate, int? termMonths)
         => (Type, Amount, AnnualInterestRatePercent, TermMonths) = (type, amount, rate, termMonths);
 
+    // Stored facts are not revalidated against today's command rules during replay.
+    internal static AgreementTerms FromHistory(AgreementType type, decimal amount, decimal rate, int? termMonths)
+        => new(type, amount, rate, termMonths);
+
     public static AgreementTerms Create(AgreementType type, decimal amount, decimal rate, int? termMonths)
     {
         var errors = new Dictionary<string, string[]>();

@@ -8,7 +8,7 @@ public sealed class SqlLendingQueries(SqlConnectionFactory connections) : ILendi
 {
     public Task<AgreementView?> GetAgreementAsync(Guid id, CancellationToken cancellationToken)
         => SingleAsync($"SELECT {SqlMapping.AgreementColumns} FROM lending.CreditAgreement WHERE CreditAgreementId = @id;", id,
-            r => SqlMapping.Agreement(r).ToView(), cancellationToken);
+            r => SqlMapping.Agreement(r), cancellationToken);
 
     public Task<AccountView?> GetAccountAsync(Guid id, CancellationToken cancellationToken)
         => SingleAsync("SELECT AccountId, CustomerId, AccountNumber, CurrencyCode, Status, OpenedAtUtc, ClosedAtUtc FROM lending.Account WHERE AccountId = @id;",
@@ -33,7 +33,7 @@ public sealed class SqlLendingQueries(SqlConnectionFactory connections) : ILendi
 
     public Task<Page<AgreementView>> ListAgreementsAsync(Guid accountId, int offset, int pageSize, CancellationToken cancellationToken)
         => ListAsync($"SELECT {SqlMapping.AgreementColumns} FROM lending.CreditAgreement WHERE AccountId = @accountId ORDER BY AgreementNumber OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY;",
-            [SqlMapping.GuidParameter("@accountId", accountId)], offset, pageSize, r => SqlMapping.Agreement(r).ToView(), cancellationToken);
+            [SqlMapping.GuidParameter("@accountId", accountId)], offset, pageSize, r => SqlMapping.Agreement(r), cancellationToken);
 
     private async Task<T?> SingleAsync<T>(string sql, Guid id, Func<SqlDataReader, T> map, CancellationToken cancellationToken) where T : class
     {
